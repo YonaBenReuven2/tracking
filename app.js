@@ -61,7 +61,7 @@
     renaming: null,       // variation being renamed: {exercise, from}
     deletingCategory: null,
     startingOver: false,
-    lastSession: null,    // {date, lesson}: where the last entry of the day was logged
+    active: null,         // {date, lesson}: which section clicking a tile logs to
     historyLimit: 40,
     boardKey: '',
     boardOrder: [],
@@ -234,17 +234,24 @@
     picker.max = t;
     if (document.activeElement !== picker) picker.value = date;
 
-    const cats = catIndex();
-    const rank = (e) => { const x = map.get(e.exercise); return x && cats.has(x.category) ? cats.get(x.category) : 99; };
-    const entries = C.entriesOn(state.doc, date).sort((a, b) => rank(a) - rank(b) || (a.id < b.id ? -1 : 1));
-    const own = entries.filter((e) => !e.lesson);
-    const lesson = entries.filter((e) => e.lesson);
-    $('#day-entries').innerHTML =
-      (own.length ? `<ol class="entries">${own.map((e) => entryItem(e, map)).join('')}</ol>` : '') +
-      (lesson.length ? `<h3 class="sub">At the lesson</h3><ol class="entries">${lesson.map((e) => entryItem(e, map)).join('')}</ol>` : '');
-    const empty = $('#day-empty');
-    empty.hidden = entries.length > 0;
-    empty.textContent = date === t ? 'Nothing logged yet. Pick an exercise to log it.' : 'Nothing logged on this day.';
+    // What was done, in the order it was logged: own practice, then the lesson.
+    const entries = C.entriesOn(state.doc, date);
+    const lessonActive = activeLesson();
+    for (const [key, lesson] of [['own', false], ['lesson', true]]) {
+      const list = entries.filter((e) => !!e.lesson === lesson);
+      const box = $(`#session-${key}`);
+      const isActive = lessonActive === lesson;
+      box.classList.toggle('active', isActive);
+      box.classList.toggle('empty-session', !list.length);
+      box.querySelector('.count').textContent = list.length ? String(list.length) : '';
+      let empty;
+      if (lesson) empty = isActive ? 'Pick what you did at the lesson from the exercises below.' : 'No lesson logged.';
+      else empty = isActive ? (date === t ? 'Nothing yet. Pick an exercise below to log it.' : 'Nothing logged.') : 'Nothing logged.';
+      box.querySelector('.session-body').innerHTML = list.length
+        ? `<ol class="entries">${list.map((e) => entryItem(e, map)).join('')}</ol>`
+        : `<p class="empty">${empty}</p>`;
+    }
+    for (const b of $$('.log-to button')) b.setAttribute('aria-checked', String((b.dataset.session === 'lesson') === lessonActive));
 
     const day = C.dayOf(state.doc, date);
     const current = day ? day.label : '';
@@ -287,7 +294,7 @@
     el.classList.toggle('done', done);
     el.querySelector('.tile-name').textContent = ex.name;
     let age;
-    if (done) age = '<b>✓</b><span>done</span>';
+    if (done) age = `<b>✓</b><span>${todays.length > 1 ? `${todays.length}×` : 'done'}</span>`;
     else if (days === null) age = '<b>never</b>';
     else age = `<b>${days}</b><span>${days === 1 ? 'day' : 'days'}</span>`;
     el.querySelector('.tile-age').innerHTML = age;
@@ -376,7 +383,7 @@
     for (const [id, el] of tileEls) if (!keep.has(id)) el.remove();
     for (const sec of sections) sectionEls.get(sec.id).el.hidden = placed.get(sec.id) === 0;
 
-    for (const b of $$('#board-head .segmented button')) b.setAttribute('aria-checked', String(b.dataset.sort === state.ui.sort));
+    for (const b of $$('#board-head [data-sort]')) b.setAttribute('aria-checked', String(b.dataset.sort === state.ui.sort));
     renderLegend(th);
   }
 
@@ -811,10 +818,18 @@
   const dialog = $('#entry-dialog');
   let ctx = null; // {mode, exercise, date, entryId?, selected: Set, plain, lesson}
 
+  /** Where a new entry goes for a date: what you picked last for that day, otherwise
+   *  where the last entry of the day went, otherwise your own practice. */
   function defaultLesson(date) {
-    if (state.lastSession && state.lastSession.date === date) return state.lastSession.lesson;
+    if (state.active && state.active.date === date) return state.active.lesson;
     const es = C.entriesOn(state.doc, date);
     return es.length ? !!es[es.length - 1].lesson : false;
+  }
+  const activeLesson = () => defaultLesson(state.date);
+
+  function setActive(lesson) {
+    state.active = { date: state.date, lesson };
+    renderDay();
   }
 
   function renderChips() {
@@ -893,7 +908,7 @@
     const map = exMap();
     if (ctx.mode === 'add') {
       const { doc, entry } = C.addEntry(state.doc, { date: ctx.date, exercise: ctx.exercise, variations, note, lesson: ctx.lesson });
-      state.lastSession = { date: ctx.date, lesson: ctx.lesson };
+      state.active = { date: ctx.date, lesson: ctx.lesson };
       dialog.close();
       commit(doc);
       toast(`Logged ${nameOf(map, entry.exercise)}${entry.variations.length ? ` (${varText(entry.variations)})` : ''}${entry.lesson ? ' at the lesson' : ''}`,
@@ -981,11 +996,17 @@
   });
   if (!('showPicker' in HTMLInputElement.prototype)) $('.date-pick').classList.add('no-picker');
 
-  $('#day-entries').addEventListener('click', (ev) => {
+  $('.done-grid').addEventListener('click', (ev) => {
     const remove = ev.target.closest('[data-remove]');
     if (remove) return removeEntry(remove.dataset.remove);
     const entry = ev.target.closest('[data-entry]');
-    if (entry) openEdit(entry.dataset.entry);
+    if (entry) return openEdit(entry.dataset.entry);
+    const session = ev.target.closest('.session');
+    if (session) setActive(session.dataset.session === 'lesson');
+  });
+  $('.log-to').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-session]');
+    if (b) setActive(b.dataset.session === 'lesson');
   });
 
   $('#day-labels').addEventListener('click', (ev) => {
@@ -1040,7 +1061,7 @@
     }
   });
 
-  $('#board-head .segmented').addEventListener('click', (ev) => {
+  $('#board-head').addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-sort]');
     if (!b) return;
     state.ui.sort = b.dataset.sort;

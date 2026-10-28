@@ -315,14 +315,14 @@ def split_row(cells, lesson_from=None):
     return own, lesson
 
 
-def build(path, today=None):
+def build(path, today=None, stamp=None):
     import openpyxl
 
     today = today or dt.date.today()
     wb = openpyxl.load_workbook(path, data_only=True)
     ws = wb.active
     report = Report()
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    stamp = stamp or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     # Pass 1: dates, and the rotation pool (for the exercise list and its order).
     rows, prev = [], None
@@ -363,34 +363,42 @@ def build(path, today=None):
         if not own_cells and not lesson_cells:
             continue
         date = d.isoformat()
-        sessions = [(False, own_cells, Session()), (True, lesson_cells, Session())]
-        day_notes, label = [], ""
-        for lesson, cells_, s in sessions:
+        # Each cell is one go at an exercise, so the same exercise twice in a day (or once
+        # on your own and again at the lesson) stays as separate entries.
+        day_notes, label, done, seen_own = [], "", [], None
+        for lesson, cells_ in [(False, own_cells), (True, lesson_cells)]:
+            seen = defaultdict(int)
+            got = []
             for v in cells_:
+                s = Session()
+                s.seen = seen
                 day_notes += read_cell(str(v), names, s, report, date)
+                got += [(lesson, ex, e) for ex, e in s.entries.items()]
+            done += got
             if lesson and cells_:
                 report.add("Lesson cells (after a gap in the row)", date,
-                           " | ".join(clean(v) for v in cells_), ", ".join(s.entries) or "notes only")
-        if len(own_cells) + len(lesson_cells) == 1 and not any(s.entries for _, _, s in sessions):
+                           " | ".join(clean(v) for v in cells_), ", ".join(ex for _, ex, _ in got) or "notes only")
+            if not lesson:
+                seen_own = seen
+        if len(own_cells) + len(lesson_cells) == 1 and not done:
             label, day_notes = clean((own_cells + lesson_cells)[0]), []
         for n in day_notes:
             report.add("Cells read as a note on the day", date, n, "day note")
 
-        twice = [n for n, k in sessions[0][2].seen.items() if k > 1]
+        twice = [n for n, k in seen_own.items() if k > 1]
         if twice:
             report.add("Same exercise twice with no gap: maybe the second was at a lesson (read as own practice)",
                        date, " | ".join(clean(v) for v in own_cells), ", ".join(twice))
         n = 0
-        for lesson, _, s in sessions:
-            for ex, e in s.entries.items():
-                n += 1
-                used[ex] += 1
-                rec = {"id": f"h-{date}-{n:02d}", "date": date, "exercise": slug(ex), "variations": e["tags"]}
-                if lesson:
-                    rec["lesson"] = True
-                rec["note"] = "; ".join(e["notes"])
-                rec["updated"] = stamp
-                entries.append(rec)
+        for lesson, ex, e in done:
+            n += 1
+            used[ex] += 1
+            rec = {"id": f"h-{date}-{n:02d}", "date": date, "exercise": slug(ex), "variations": e["tags"]}
+            if lesson:
+                rec["lesson"] = True
+            rec["note"] = "; ".join(e["notes"])
+            rec["updated"] = stamp
+            entries.append(rec)
         if label or day_notes:
             days.append({"id": date, "label": label, "note": "; ".join(day_notes), "updated": stamp})
 
@@ -462,9 +470,12 @@ def main(argv=None):
     ap.add_argument("xlsx")
     ap.add_argument("-o", "--out", default="log.json")
     ap.add_argument("--today", help="ignore rows after this date (YYYY-MM-DD); default today")
+    ap.add_argument("--stamp", help="the 'updated' time to give every record (default: now). Set it just after "
+                    "the time in a file you already loaded, and loading the new one replaces the old import "
+                    "without undoing anything you changed in the app since.")
     args = ap.parse_args(argv)
     today = dt.date.fromisoformat(args.today) if args.today else None
-    doc, report = build(args.xlsx, today)
+    doc, report = build(args.xlsx, today, args.stamp)
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize(doc))
     practice_days = len({e["date"] for e in doc["entries"]})

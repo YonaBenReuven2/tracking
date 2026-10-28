@@ -150,30 +150,39 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 
 /* ---------------------------------------------------------------- day */
 
-.day-layout {
-  display: grid; gap: 28px;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  grid-template-areas: "board sheet";
-  align-items: start;
-}
-.board { grid-area: board; min-width: 0; }
-.sheet {
-  grid-area: sheet; position: sticky; top: 80px;
-  display: flex; flex-direction: column; gap: 16px;
-  padding: 18px; background: var(--surface);
-  border: 1px solid var(--line); border-radius: 10px;
-}
-
-.date-nav { display: flex; align-items: center; gap: 8px; }
-.date-text { flex: 1; text-align: center; }
-.date-text h1 { font-size: 21px; }
+.day-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.date-text h1 { font-size: 26px; }
 .date-text p { color: var(--muted); font-size: 14px; margin-top: 2px; }
-.date-tools { display: flex; justify-content: center; gap: 8px; margin-top: -8px; }
-.date-tools button { min-height: 32px; font-size: 14px; white-space: nowrap; }
+.date-tools { display: flex; gap: 8px; margin-left: auto; }
+.date-tools button { min-height: 34px; font-size: 14px; white-space: nowrap; }
 .date-pick { position: relative; display: inline-flex; }
 .date-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
-.date-pick.no-picker input { position: static; opacity: 1; pointer-events: auto; width: auto; min-height: 32px; }
+.date-pick.no-picker input { position: static; opacity: 1; pointer-events: auto; width: auto; min-height: 34px; }
 .date-pick.no-picker button { display: none; }
+
+/* what was done: own practice and the lesson, side by side */
+.done-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; align-items: start; }
+.session {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 16px 16px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.session header { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.session h2 { font-size: 18px; }
+.session .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.session .here { display: none; margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent); }
+.session .log-here { margin-left: auto; }
+.session.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.session.active .here { display: inline; }
+.session.active .log-here { display: none; }
+.session:not(.active) { cursor: pointer; }
+.session .empty { font-size: 15px; }
+
+.day-extra {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start;
+  padding-bottom: 24px; margin-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+.day-note textarea { min-height: 62px; }
 
 .entries { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .entries li { display: flex; align-items: stretch; border-radius: 6px; background: var(--sunk); }
@@ -213,11 +222,17 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 
 /* the board */
 
-.board-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.board-head input { width: 230px; min-height: 34px; }
-#day-entries { display: flex; flex-direction: column; gap: 8px; }
-#day-entries:empty { display: none; }
-.sheet .sub { font-size: 14px; font-weight: 600; color: var(--muted); margin-top: 6px; }
+.board-head {
+  position: sticky; top: 56px; z-index: 4;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 0; margin-bottom: 6px; background: var(--bg);
+}
+.board-head h2 { font-size: 20px; margin-right: 6px; }
+.board-head .spacer { flex: 1; }
+.board-head input { width: 200px; min-height: 34px; }
+.log-to { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.log-to .segmented button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+
 
 .group { margin-bottom: 22px; }
 .group h2 { margin-bottom: 10px; }
@@ -409,8 +424,7 @@ label.button.danger { border-color: var(--danger); }
 /* ---------------------------------------------------------------- narrow screens */
 
 @media (max-width: 960px) {
-  .day-layout { grid-template-columns: 1fr; grid-template-areas: "sheet" "board"; }
-  .sheet { position: static; }
+  .done-grid, .day-extra { grid-template-columns: 1fr; }
   .ex-layout { grid-template-columns: 1fr; }
   .ex-list { position: static; max-height: none; }
 }
@@ -422,7 +436,10 @@ label.button.danger { border-color: var(--danger); }
   .tabs a { padding: 0 8px; }
   .sync .sync-text { display: none; }
   .tiles { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .board-head { position: static; }
   .board-head input { width: 100%; }
+  .board-head .spacer { display: none; }
+  .date-tools { margin-left: 0; width: 100%; }
   .tile { padding: 9px 10px 8px; }
   .tile-name { font-size: 15px; }
   .group-head input { width: 100%; order: 3; }

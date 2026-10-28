@@ -4,7 +4,7 @@
  * Other apps on the same github.io site have their own caches; this only ever deletes
  * caches whose names start with its own prefix. */
 const PREFIX = 'practicelog-';
-const CACHE = PREFIX + 'v2';
+const CACHE = PREFIX + 'v3';
 const SHELL = ['./', 'index.html', 'style.css', 'core.js', 'github.js', 'app.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

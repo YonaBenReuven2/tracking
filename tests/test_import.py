@@ -11,11 +11,10 @@ NAMES = sorted(["basic scale", "hallelujah", "hallelujah 2", "hallelujah 3", "hu
                key=len, reverse=True)
 
 
-def read(*cells):
+def read(cell):
+    """One cell, as the importer reads it: {exercise: variations}, notes, session."""
     s = it.Session()
-    notes = []
-    for c in cells:
-        notes += it.read_cell(c, NAMES, s, it.Report(), "2026-01-01")
+    notes = it.read_cell(cell, NAMES, s, it.Report(), "2026-01-01")
     return {ex: e["tags"] for ex, e in s.entries.items()}, notes, s
 
 
@@ -42,11 +41,12 @@ def test_breathing():
 
 def test_combined_exercises():
     assert read("evil laugh 2 random")[0] == {"evil laugh": ["2", "random"]}
-    assert read("evil laugh 2", "evil laugh 3")[0] == {"evil laugh": ["2", "3"]}
+
     assert read("vavevivovu - a")[0] == {"vavevivovu": ["a"]}
     assert read("mimema we")[0] == {"vavevivovu": ["mimema", "we"]}
     assert read("nasal hum")[0] == {"hum": ["nasal"]}
-    assert read("dynamic vi", "gliss")[0] == {"gliss": ["octave", "compound"]}
+    assert read("dynamic vi")[0] == {"gliss": ["octave"]}
+    assert read("gliss")[0] == {"gliss": ["compound"]}
     assert read("gliss brr")[0] == {"gliss": ["brr"]}
     assert read("brr gliss")[0] == {"gliss": ["brr"]}
     assert read("brr up down up")[0] == {"up down up": ["brr"]}
@@ -72,6 +72,26 @@ def test_lesson_split():
     assert own == ["ma_a_a", "kiti", "vibrato"] and lesson == []
     own, lesson = it.split_row(["sfch no random", "dynamic vi", "mimema", "do", "gliss", "do", None], 4)
     assert own == ["sfch no random", "dynamic vi", "mimema", "do"] and lesson == ["gliss", "do"]
+
+
+def test_each_cell_is_its_own_entry():
+    import datetime as dt
+    import openpyxl
+    import tempfile
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append([dt.datetime(2026, 1, 4), "sfch no random 30s", "basic scale g4", "basic scale a4", None, "basic scale", "ree"])
+    ws.append([dt.datetime(2026, 1, 5), "shabbat"])
+    for c in range(9, 12):
+        ws.cell(1, c, ["basic scale", "ree", "kiti"][c - 9])
+    path = os.path.join(tempfile.mkdtemp(), "t.xlsx")
+    wb.save(path)
+    doc, _ = it.build(path, dt.date(2026, 1, 10))
+    got = [(e["exercise"], e["variations"], e.get("lesson", False)) for e in doc["entries"]]
+    assert got == [("sfch", ["set order"], False), ("holding-breath", ["30s"], False),
+                   ("basic-scale", ["g4"], False), ("basic-scale", ["a4"], False),
+                   ("basic-scale", [], True), ("ree", [], True)], got
+    assert doc["days"][0]["label"] == "shabbat"
 
 
 def test_ids_and_serialize():

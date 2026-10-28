@@ -66,9 +66,14 @@ Everything here is on the Exercises tab.
 - **Combining.** *Make it a variation of another exercise* moves all of an exercise's
   entries into another one, marked with a variation (its old name by default), and takes
   it off the list. Undo is in the message that appears straight after.
-- **Lessons.** When you log, choose *Own practice* or *At a lesson*. The day shows the two
-  separately. Within a day, the next log defaults to the same choice. Settings → Board
-  decides whether lesson exercises count towards the colours.
+- **The day page** has three parts: what you did in your own practice, what you did at a
+  lesson, and below them all your exercises. The outlined section is where clicking an
+  exercise logs it. Switch with *Log here*, or with *Clicking one logs it to* above the
+  exercises. The log dialog can also send a single entry to the other section.
+- **Every log is its own line**, so the same exercise can appear twice in a session (two
+  variations of a scale, say), or in both your own practice and the lesson. A tile shows
+  how many times it was done that day. Settings → Board decides whether lesson exercises
+  count towards the colours.
 - **Archive** takes an exercise off the board and keeps its history. Only exercises with
   no entries can be deleted.
 
@@ -124,7 +129,9 @@ python tools/import_tracking.py "path\to\Tracking.xlsx" -o import\log.json
 How it reads the sheet:
 
 - Cells from column B up to the first empty cell are your own practice. Anything after an
-  empty cell, or a row that only starts at column E or later, was at a lesson.
+  empty cell, or a row that only starts at column E or later, was at a lesson. A few
+  rows with no gap are set by hand in `LESSON_STARTS`.
+- Each cell is one entry, so an exercise written twice stays as two entries.
 - Breathing: `sfch` and `sfch no random` are sfch in *set order*, `all breathing` is set
   and random order, `sfch songs` is *songs*, and `5 sfch` is kept as an old variation.
   A number of seconds is the separate *holding breath* exercise.
@@ -134,8 +141,15 @@ How it reads the sheet:
 
 It prints a report of every cell it had to interpret: typos it fixed, lesson cells,
 second lines joined to a variation, cells read as notes. The rules are tables at the top
-of the script. If something is read wrong, change the table and re-run it, then use
-*Start over from a file* with the new `log.json`.
+of the script. If something is read wrong, change the table and re-run it. To bring a
+corrected import into a log you've already been using, give it a time just after the
+`"updated"` time in the file you loaded, then use *Load a log file*:
+```
+python tools/import_tracking.py "path\to\Tracking.xlsx" -o import\log.json --stamp 2026-10-28T13:05:10.000Z
+```
+The corrected entries replace the old import, and anything you changed or logged in the
+app since stays. *Start over from a file* also works, but it removes everything that
+isn't in the file.
 
 ## Tests
 

@@ -34,57 +34,84 @@
 
   <main>
     <section class="view" id="view-day" aria-labelledby="day-title">
-      <div class="day-layout">
-        <aside class="sheet" aria-label="This day">
-          <div class="date-nav">
-            <button type="button" class="icon" id="prev-day" aria-label="Previous day" title="Previous day (←)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <div class="date-text">
-              <h1 id="day-title"></h1>
-              <p id="day-relative"></p>
-            </div>
-            <button type="button" class="icon" id="next-day" aria-label="Next day" title="Next day (→)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          </div>
-          <div class="date-tools">
-            <span class="date-pick">
-              <button type="button" class="quiet" id="pick-date">Pick a date</button>
-              <input type="date" id="day-picker" aria-label="Go to date" tabindex="-1">
-            </span>
-            <button type="button" class="quiet" id="go-today">Back to today</button>
-          </div>
-          <div id="day-entries"></div>
-          <p class="empty" id="day-empty">Nothing logged yet. Pick an exercise to log it.</p>
-          <div class="day-mark">
-            <h2>Mark the day</h2>
-            <div class="chips" id="day-labels"></div>
-            <form id="label-form" class="inline-form" hidden>
-              <input id="label-input" placeholder="e.g. throat, travelling" aria-label="Day label" autocomplete="off">
-              <button class="quiet">Set</button>
-            </form>
-          </div>
-          <label class="day-note">
-            <span>Note</span>
-            <textarea id="day-note" rows="3" placeholder="How it went, anything to remember"></textarea>
-          </label>
-        </aside>
-
-        <div class="board">
-          <div class="board-empty" id="board-empty" hidden>
-            <h2>Your exercises go here</h2>
-            <p>Load the log file made from your spreadsheet, or start by adding an exercise.</p>
-            <p class="actions"><a class="button primary" href="#settings">Load your log</a> <a class="button quiet" href="#exercises" id="empty-add">Add an exercise</a></p>
-          </div>
-          <div class="board-head" id="board-head">
-            <input type="search" id="filter" placeholder="Find (press /)" aria-label="Find an exercise or variation" autocomplete="off">
-            <div class="segmented" role="radiogroup" aria-label="Order">
-              <button type="button" role="radio" data-sort="stale">Longest ago first</button>
-              <button type="button" role="radio" data-sort="order">Your order</button>
-              <button type="button" role="radio" data-sort="name">A–Z</button>
-            </div>
-          </div>
-          <div id="board-groups"></div>
-          <p class="empty" id="filter-empty" hidden>No exercise or variation matches that.</p>
-          <figure class="legend" id="legend" aria-label="Colour shows how long ago an exercise was last done"></figure>
+      <div class="day-top">
+        <button type="button" class="icon" id="prev-day" aria-label="Previous day" title="Previous day (←)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="date-text">
+          <h1 id="day-title"></h1>
+          <p id="day-relative"></p>
         </div>
+        <button type="button" class="icon" id="next-day" aria-label="Next day" title="Next day (→)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="date-tools">
+          <span class="date-pick">
+            <button type="button" class="quiet" id="pick-date">Pick a date</button>
+            <input type="date" id="day-picker" aria-label="Go to date" tabindex="-1">
+          </span>
+          <button type="button" class="quiet" id="go-today">Back to today</button>
+        </div>
+      </div>
+
+      <div class="done-grid">
+        <section class="session" id="session-own" data-session="own" aria-labelledby="own-title">
+          <header>
+            <h2 id="own-title">Own practice</h2>
+            <span class="count"></span>
+            <span class="here">Logging here</span>
+            <button type="button" class="quiet small log-here" data-session="own">Log here</button>
+          </header>
+          <div class="session-body"></div>
+        </section>
+        <section class="session" id="session-lesson" data-session="lesson" aria-labelledby="lesson-title">
+          <header>
+            <h2 id="lesson-title">Lesson</h2>
+            <span class="count"></span>
+            <span class="here">Logging here</span>
+            <button type="button" class="quiet small log-here" data-session="lesson">Log here</button>
+          </header>
+          <div class="session-body"></div>
+        </section>
+      </div>
+
+      <div class="day-extra">
+        <div class="day-mark">
+          <h2>Mark the day</h2>
+          <div class="chips" id="day-labels"></div>
+          <form id="label-form" class="inline-form" hidden>
+            <input id="label-input" placeholder="e.g. throat, travelling" aria-label="Day label" autocomplete="off">
+            <button class="quiet">Set</button>
+          </form>
+        </div>
+        <label class="day-note">
+          <span>Note</span>
+          <textarea id="day-note" rows="2" placeholder="How it went, anything to remember"></textarea>
+        </label>
+      </div>
+
+      <div class="board">
+        <div class="board-head" id="board-head">
+          <h2>All exercises</h2>
+          <div class="log-to">
+            <span id="log-to-label">Clicking one logs it to</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="log-to-label">
+              <button type="button" role="radio" data-session="own">Own practice</button>
+              <button type="button" role="radio" data-session="lesson">Lesson</button>
+            </div>
+          </div>
+          <span class="spacer"></span>
+          <input type="search" id="filter" placeholder="Find (press /)" aria-label="Find an exercise or variation" autocomplete="off">
+          <div class="segmented" role="radiogroup" aria-label="Order">
+            <button type="button" role="radio" data-sort="stale">Longest ago first</button>
+            <button type="button" role="radio" data-sort="order">Your order</button>
+            <button type="button" role="radio" data-sort="name">A–Z</button>
+          </div>
+        </div>
+        <div class="board-empty" id="board-empty" hidden>
+          <h2>Your exercises go here</h2>
+          <p>Load the log file made from your spreadsheet, or start by adding an exercise.</p>
+          <p class="actions"><a class="button primary" href="#settings">Load your log</a> <a class="button quiet" href="#exercises" id="empty-add">Add an exercise</a></p>
+        </div>
+        <div id="board-groups"></div>
+        <p class="empty" id="filter-empty" hidden>No exercise or variation matches that.</p>
+        <figure class="legend" id="legend" aria-label="Colour shows how long ago an exercise was last done"></figure>
       </div>
     </section>
 
