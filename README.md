@@ -151,6 +151,13 @@ The corrected entries replace the old import, and anything you changed or logged
 app since stays. *Start over from a file* also works, but it removes everything that
 isn't in the file.
 
+## Updating the app
+
+`index.html` loads the CSS and JavaScript as `style.css?v=4`, `app.js?v=4` and so on.
+Whenever those files change, the number goes up (in `index.html` and in `SHELL` in
+`sw.js`). That way the browser can't mix a new page with old cached files. After pushing,
+wait a minute, then reload.
+
 ## Tests
 
 ```
