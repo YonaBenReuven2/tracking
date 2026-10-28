@@ -1,0 +1,5 @@
+# Your practice data lives in the private data repo, never in this (public) one.
+import/
+log.json
+node_modules/
+__pycache__/
