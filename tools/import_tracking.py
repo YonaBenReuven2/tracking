@@ -111,7 +111,7 @@ DAY_COL = 1               # A: date
 LOG_COLS = range(2, 9)    # B..H: what was done that day
 POOL_COLS = range(9, 27)  # I..Z: the rotation grid
 SECONDS = re.compile(r"^(?:then\s+)?\d+\s*s\b", re.I)
-KEY_ORDER = ["id", "date", "exercise", "name", "category", "variations", "lesson", "archived", "order",
+KEY_ORDER = ["id", "date", "exercise", "name", "category", "variations", "lesson", "pos", "archived", "order",
              "label", "note", "deleted", "updated"]
 
 

@@ -53,7 +53,9 @@
   //   category: {id, name, order, updated}
   //   exercise: {id, name, category, variations: [names], archived, order, updated}
   //   day:      {id: 'YYYY-MM-DD', label, note, updated}
-  //   entry:    {id, date, exercise, variations: [names], lesson?, note, updated}
+  //   entry:    {id, date, exercise, variations: [names], lesson?, pos?, note, updated}
+  //             pos is the place in that day's list once you've reordered it by hand;
+  //             without it, entries are in the order they were logged.
   // Records are never removed: a deletion is {deleted: true} with a newer `updated`.
   // That makes merging two copies a plain union where the newer version of a record wins.
 
@@ -111,7 +113,7 @@
     return out;
   }
 
-  const KEY_ORDER = ['id', 'date', 'exercise', 'name', 'category', 'variations', 'lesson', 'archived', 'order',
+  const KEY_ORDER = ['id', 'date', 'exercise', 'name', 'category', 'variations', 'lesson', 'pos', 'archived', 'order',
     'label', 'note', 'deleted', 'updated'];
 
   function ordered(rec) {
@@ -207,6 +209,8 @@
 
   function editEntry(doc, id, changes, now = Date.now()) {
     const c = { ...changes };
+    const old = find(doc, 'entries', id);
+    if (old && 'lesson' in c && !!c.lesson !== !!old.lesson && !('pos' in c)) c.pos = undefined;
     if (c.variations) c.variations = cleanTags(c.variations);
     if (typeof c.note === 'string') c.note = c.note.trim();
     return edit(doc, 'entries', id, c, now);
@@ -285,6 +289,13 @@
   }
 
   const editExercise = (doc, id, changes, now = Date.now()) => edit(doc, 'exercises', id, changes, now);
+
+  /** Put a category's exercises in this order (and into this category, for ones dragged in). */
+  function arrangeExercises(doc, category, ids, now = Date.now()) {
+    let next = doc;
+    ids.forEach((id, i) => { next = editExercise(next, id, { category, order: i + 1 }, now); });
+    return next;
+  }
 
   /** Swap an exercise with its neighbour among the active exercises of its category. */
   function moveExercise(doc, id, dir, now = Date.now()) {
@@ -400,8 +411,24 @@
 
   const live = (doc) => doc.entries.filter((e) => !e.deleted);
 
+  const byPos = (a, b) => ((a.pos ?? Infinity) - (b.pos ?? Infinity)) || byId(a, b);
+
+  /** A day's entries in their list order (own practice and lesson mixed; filter by e.lesson). */
   function entriesOn(doc, date) {
-    return live(doc).filter((e) => e.date === date).sort(byId);
+    return live(doc).filter((e) => e.date === date).sort(byPos);
+  }
+
+  /**
+   * Set a day's lists from the order they're shown in after dragging:
+   * lists = [{lesson: false, ids: [...]}, {lesson: true, ids: [...]}]. Only entries whose
+   * place or section actually changed get a new record.
+   */
+  function arrangeEntries(doc, lists, now = Date.now()) {
+    let next = doc;
+    for (const { lesson, ids } of lists) {
+      ids.forEach((id, i) => { next = editEntry(next, id, { pos: i + 1, lesson: !!lesson }, now); });
+    }
+    return next;
   }
 
   const dayOf = (doc, date) => doc.days.find((d) => d.id === date) || null;
@@ -630,7 +657,8 @@
     emptyDoc, validate, serialize, sameDoc, merge, isEmpty, recordText, cleanTags,
     addEntry, editEntry, deleteEntry, restoreEntry, setDay,
     liveCategories, ensureCategories, addCategory, editCategory, deleteCategory, moveCategory,
-    liveExercises, byOrder, addExercise, editExercise, moveExercise, deleteExercise, entriesOf,
+    liveExercises, byOrder, addExercise, editExercise, moveExercise, arrangeExercises, deleteExercise, entriesOf,
+    arrangeEntries,
     addVariation, removeVariation, moveVariation, renameVariation, combineExercises, revert, replaceWith,
     live, entriesOn, dayOf, exerciseStats, variationChoices, labelsByUse, activeDates,
     measure, pitchName, progress,

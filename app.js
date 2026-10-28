@@ -213,9 +213,13 @@
 
   // -- day view
 
+  const GRIP = '<svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true"><g fill="currentColor"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></g></svg>';
+
   function entryItem(e, map) {
     const name = nameOf(map, e.exercise);
-    return `<li><button type="button" class="entry" data-entry="${esc(e.id)}" title="Edit">` +
+    return `<li data-id="${esc(e.id)}" draggable="true">` +
+      `<button type="button" class="grip" data-grip aria-label="Move ${esc(name)} (arrow keys)" title="Drag to reorder, or use the arrow keys">${GRIP}</button>` +
+      `<button type="button" class="entry" data-entry="${esc(e.id)}" title="Edit">` +
       `<b>${esc(name)}</b>${e.variations.length ? `<span class="var">${esc(varText(e.variations))}</span>` : ''}` +
       `${e.note ? `<span class="note">${esc(e.note)}</span>` : ''}</button>` +
       `<button type="button" class="entry-remove" data-remove="${esc(e.id)}" aria-label="Remove ${esc(name)}" title="Remove">×</button></li>`;
@@ -240,6 +244,7 @@
     for (const [key, lesson] of [['own', false], ['lesson', true]]) {
       const list = entries.filter((e) => !!e.lesson === lesson);
       const box = $(`#session-${key}`);
+      box.dataset.list = key;
       const isActive = lessonActive === lesson;
       box.classList.toggle('active', isActive);
       box.classList.toggle('empty-session', !list.length);
@@ -335,7 +340,8 @@
 
     // The order is worked out when the day, sort or filter changes, not on every log,
     // so a tile you just logged stays put and fades instead of jumping away.
-    const key = [state.date, state.ui.sort, state.ui.countLessons, f, visible.map((e) => e.id).join(',')].join('|');
+    const orderSig = state.ui.sort === 'order' ? visible.map((e) => `${e.category}:${e.order}`).join(',') : '';
+    const key = [state.date, state.ui.sort, state.ui.countLessons, f, visible.map((e) => e.id).join(','), orderSig].join('|');
     if (key !== state.boardKey) {
       state.boardKey = key;
       state.boardOrder = orderFor(visible, stats);
@@ -479,12 +485,14 @@
     }
     const cats = C.liveCategories(state.doc);
     const catIds = new Set(cats.map((c) => c.id));
-    const groups = cats.map((c) => [c.name, all.filter((e) => !e.archived && e.category === c.id)]);
-    groups.push(['Other', all.filter((e) => !e.archived && !catIds.has(e.category))]);
-    groups.push(['Archived', all.filter((e) => e.archived)]);
-    const item = (e) => {
+    const groups = cats.map((c) => [c.name, all.filter((e) => !e.archived && e.category === c.id), c.id]);
+    groups.push(['Other', all.filter((e) => !e.archived && !catIds.has(e.category)), null]);
+    groups.push(['Archived', all.filter((e) => e.archived), null]);
+    const item = (e, movable) => {
       const s = stats.get(e.id);
-      return `<li><a href="#exercises/${encodeURIComponent(e.id)}" aria-current="${e.id === state.exercise}">` +
+      return `<li data-id="${esc(e.id)}"${movable ? ' draggable="true"' : ''}>` +
+        (movable ? `<button type="button" class="grip" data-grip aria-label="Move ${esc(e.name)} (arrow keys)" title="Drag to reorder or to another category">${GRIP}</button>` : '') +
+        `<a href="#exercises/${encodeURIComponent(e.id)}" aria-current="${e.id === state.exercise}">` +
         `<span class="sw" style="background:${C.staleColor(s.daysSince, th)}"></span>${esc(e.name)}<span class="d">${shortAgo(s.daysSince)}</span></a></li>`;
     };
     const catOptions = cats.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
@@ -497,7 +505,10 @@
           `<div class="ex-add-row">${cats.length ? `<select name="category" aria-label="Category">${catOptions}</select>` : ''}` +
           `<button class="primary">Add</button><button type="button" class="quiet" data-act="add-cancel">Cancel</button></div></form>`
         : '') +
-      groups.filter(([, list]) => list.length).map(([title, list]) => `<h2>${esc(title)}</h2><ul>${list.map(item).join('')}</ul>`).join('');
+      groups.filter(([, list, id]) => list.length || id).map(([title, list, id]) =>
+        `<h2>${esc(title)}</h2><ul${id ? ` data-list="${esc(id)}"` : ''}>${list.map((e) => item(e, !!id)).join('')}` +
+        `${!list.length ? '<li class="drop-hint">Drag exercises here</li>' : ''}</ul>`).join('') +
+      `<p class="hint">Drag to set “Your order” on the board, or onto another category to move an exercise there.</p>`;
 
     if (state.exercise === CATS) $('#ex-detail').innerHTML = categoriesPanel();
     else {
@@ -568,7 +579,7 @@
       `<section class="ex-section"><h2>Change this exercise</h2><div class="ex-tools">` +
       `<form class="rename" data-form="rename"><input name="name" value="${esc(ex.name)}" aria-label="Name" required autocomplete="off"><button class="quiet">Rename</button></form>` +
       (cats.length ? `<select data-act="category" aria-label="Category">${cats.map((c) => `<option value="${esc(c.id)}"${c.id === ex.category ? ' selected' : ''}>In ${esc(c.name)}</option>`).join('')}</select>` : '') +
-      (ex.archived ? '' : `<button type="button" class="quiet" data-act="up" title="Earlier in “Your order”">Move up</button><button type="button" class="quiet" data-act="down" title="Later in “Your order”">Move down</button>`) +
+
       `<button type="button" class="quiet" data-act="archive">${ex.archived ? 'Put back on the board' : 'Archive'}</button>` +
       (n ? '' : `<button type="button" class="danger" data-act="delete-ex">Delete</button>`) +
       `</div><p class="hint">Archived exercises leave the board but keep their history.${n ? ' Exercises with history can be archived or combined, not deleted.' : ''}</p></section>` +
@@ -823,7 +834,9 @@
   function defaultLesson(date) {
     if (state.active && state.active.date === date) return state.active.lesson;
     const es = C.entriesOn(state.doc, date);
-    return es.length ? !!es[es.length - 1].lesson : false;
+    if (!es.length) return false;
+    const lastLogged = es.reduce((m, e) => (e.id > m.id ? e : m));
+    return !!lastLogged.lesson;
   }
   const activeLesson = () => defaultLesson(state.date);
 
@@ -997,6 +1010,7 @@
   if (!('showPicker' in HTMLInputElement.prototype)) $('.date-pick').classList.add('no-picker');
 
   $('.done-grid').addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-grip]')) return;
     const remove = ev.target.closest('[data-remove]');
     if (remove) return removeEntry(remove.dataset.remove);
     const entry = ev.target.closest('[data-entry]');
@@ -1070,6 +1084,88 @@
   });
 
   $('#empty-add').addEventListener('click', () => { state.adding = true; });
+
+  // ------------------------------------------------------------------ drag to reorder
+  // Items are li[data-id] inside elements marked data-list. Drag them with the mouse, or
+  // focus the grip on the left and use the up and down arrow keys.
+
+  function sortable(root, onDrop) {
+    let drag = null, target = null;
+    const clear = () => {
+      for (const el of $$('.drop-before, .drop-after, .drop-into', root)) el.classList.remove('drop-before', 'drop-after', 'drop-into');
+    };
+    const finish = () => {
+      clear();
+      if (drag) drag.el.classList.remove('dragging');
+      drag = null;
+      target = null;
+    };
+    root.addEventListener('dragstart', (ev) => {
+      const li = ev.target.closest && ev.target.closest('li[data-id][draggable="true"]');
+      if (!li || !li.closest('[data-list]')) return;
+      drag = { id: li.dataset.id, el: li };
+      ev.dataTransfer.effectAllowed = 'move';
+      try { ev.dataTransfer.setData('text/plain', li.dataset.id); } catch (e) { /* some browsers */ }
+      setTimeout(() => li.classList.add('dragging'), 0);
+    });
+    root.addEventListener('dragover', (ev) => {
+      if (!drag) return;
+      const list = ev.target.closest('[data-list]');
+      if (!list) { clear(); target = null; return; }
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      const items = $$('li[data-id]', list).filter((x) => x !== drag.el);
+      let index = items.findIndex((x) => { const r = x.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2; });
+      if (index < 0) index = items.length;
+      clear();
+      if (items[index]) items[index].classList.add('drop-before');
+      else if (items.length) items[items.length - 1].classList.add('drop-after');
+      else list.classList.add('drop-into');
+      target = { list, index };
+    });
+    root.addEventListener('drop', (ev) => {
+      if (!drag || !target) return;
+      ev.preventDefault();
+      const { list, index } = target, id = drag.id;
+      finish();
+      onDrop(id, list, index);
+    });
+    root.addEventListener('dragend', finish);
+    root.addEventListener('keydown', (ev) => {
+      const grip = ev.target.closest('[data-grip]');
+      if (!grip || (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return;
+      ev.preventDefault();
+      const li = grip.closest('li[data-id]');
+      const list = li.closest('[data-list]');
+      const all = $$('li[data-id]', list);
+      const index = all.indexOf(li) + (ev.key === 'ArrowUp' ? -1 : 1);
+      if (index < 0 || index >= all.length) return;
+      onDrop(li.dataset.id, list, index);
+      const again = $(`li[data-id="${CSS.escape(li.dataset.id)}"] [data-grip]`, root);
+      if (again) again.focus();
+    });
+  }
+
+  sortable($('.done-grid'), (id, list, index) => {
+    const lists = ['own', 'lesson'].map((k) => ({
+      lesson: k === 'lesson',
+      ids: $$('li[data-id]', $(`#session-${k}`)).map((li) => li.dataset.id).filter((x) => x !== id),
+    }));
+    lists.find((l) => l.lesson === (list.dataset.list === 'lesson')).ids.splice(index, 0, id);
+    commit(C.arrangeEntries(state.doc, lists));
+  });
+
+  sortable($('#ex-list'), (id, list, index) => {
+    const category = list.dataset.list;
+    const ids = $$('li[data-id]', list).map((li) => li.dataset.id).filter((x) => x !== id);
+    ids.splice(index, 0, id);
+    const ex = exMap().get(id);
+    commit(C.arrangeExercises(state.doc, category, ids));
+    if (ex.category !== category) {
+      const cat = state.doc.categories.find((c) => c.id === category);
+      toast(`Moved ${ex.name} to ${cat ? cat.name : 'another category'}`);
+    }
+  });
 
   // ------------------------------------------------------------------ events: other views
 

@@ -297,3 +297,37 @@ test('starting over: the new file wins everywhere, old records are marked delete
   const mergedWithOld = core.merge(old, next);
   assert.ok(core.sameDoc(mergedWithOld, next));
 });
+
+test('reordering a day: entries keep the dragged order, and can move between sections', () => {
+  let doc = sample();
+  doc = log(doc, 'sfch', '2026-10-28', [], T0 + 1);
+  doc = log(doc, 'basic scale', '2026-10-28', ['g4'], T0 + 2);
+  doc = log(doc, 'ree', '2026-10-28', [], T0 + 3);
+  doc = log(doc, 'basic scale', '2026-10-28', ['a4'], T0 + 4, { lesson: true });
+  const ids = core.entriesOn(doc, '2026-10-28').map((e) => e.id);
+  const [sfch, bs, ree, bsLesson] = ids;
+  doc = core.arrangeEntries(doc, [{ lesson: false, ids: [ree, sfch] }, { lesson: true, ids: [bs, bsLesson] }], T0 + 10);
+  const day = core.entriesOn(doc, '2026-10-28');
+  assert.deepEqual(day.filter((e) => !e.lesson).map((e) => e.id), [ree, sfch]);
+  assert.deepEqual(day.filter((e) => e.lesson).map((e) => e.id), [bs, bsLesson]);
+  // A new entry goes after the hand-ordered ones.
+  doc = log(doc, 'sfch', '2026-10-28', ['songs'], T0 + 20);
+  assert.equal(core.entriesOn(doc, '2026-10-28').filter((e) => !e.lesson).pop().variations[0], 'songs');
+  // Moving one to the other section from the edit dialog puts it at the end there.
+  doc = core.editEntry(doc, ree, { lesson: true }, T0 + 30);
+  assert.equal(core.entriesOn(doc, '2026-10-28').filter((e) => e.lesson).pop().id, ree);
+  // Nothing changes, nothing is rewritten.
+  const again = core.entriesOn(doc, '2026-10-28');
+  const same = core.arrangeEntries(doc, [{ lesson: false, ids: again.filter((e) => !e.lesson).map((e) => e.id) }], T0 + 40);
+  assert.ok(core.entriesOn(same, '2026-10-28').filter((e) => !e.lesson).every((e, i) => e.pos === i + 1));
+});
+
+test('arranging exercises sets Your order and can move them to another category', () => {
+  let doc = sample();
+  const [bs, ree, sfch] = ['basic scale', 'ree', 'sfch'].map((n) => idOf(doc, n));
+  doc = core.arrangeExercises(doc, 'exercises', [ree, bs], T0 + 10);
+  assert.deepEqual(core.liveExercises(doc).filter((e) => e.category === 'exercises').sort(core.byOrder).map((e) => e.name), ['ree', 'basic scale']);
+  doc = core.arrangeExercises(doc, 'breathing', [sfch, ree], T0 + 11);
+  assert.equal(doc.exercises.find((x) => x.id === ree).category, 'breathing');
+  assert.deepEqual(core.liveExercises(doc).filter((e) => e.category === 'breathing').sort(core.byOrder).map((e) => e.name), ['sfch', 'ree']);
+});

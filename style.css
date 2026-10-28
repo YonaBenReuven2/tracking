@@ -194,6 +194,16 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .entry b { font-weight: 650; }
 .entry .var { color: var(--muted); }
 .entry .note { flex-basis: 100%; font-size: 14px; font-style: italic; color: var(--muted); }
+.grip {
+  flex: none; width: 26px; min-width: 26px; min-height: 0; padding: 0;
+  border: 0; background: transparent; color: var(--muted); cursor: grab; opacity: 0.5;
+}
+.grip:hover { border: 0; }
+li:hover > .grip, .grip:focus-visible { opacity: 1; }
+li.dragging { opacity: 0.4; }
+li.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+li.drop-after { box-shadow: 0 3px 0 var(--accent); }
+.drop-into { outline: 2px dashed var(--accent); outline-offset: -3px; }
 .entry-remove { min-width: 38px; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 20px; }
 .entry-remove:hover { color: var(--danger); }
 .empty { color: var(--muted); font-size: 15px; }
@@ -341,7 +351,12 @@ dialog .spacer { flex: 1; }
 .ex-list { position: sticky; top: 80px; max-height: calc(100vh - 104px); overflow-y: auto; padding-right: 4px; }
 .ex-list h2 { font-size: 14px; color: var(--muted); font-weight: 600; margin: 18px 0 6px; }
 .ex-list h2:first-of-type { margin-top: 14px; }
-.ex-list ul { list-style: none; margin: 0; padding: 0; }
+.ex-list ul { list-style: none; margin: 0; padding: 0; min-height: 10px; border-radius: 6px; }
+.ex-list li { display: flex; align-items: center; border-radius: 6px; }
+.ex-list li > a { flex: 1; min-width: 0; }
+.ex-list .grip { width: 18px; min-width: 18px; height: 28px; opacity: 0; }
+.ex-list li:hover > .grip, .ex-list .grip:focus-visible { opacity: 0.8; }
+.ex-list .drop-hint { display: block; padding: 6px 10px; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); }
 .ex-list a {
   display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 6px;
   color: var(--ink); text-decoration: none;

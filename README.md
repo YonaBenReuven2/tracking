@@ -53,6 +53,9 @@ itself is one JSON file in a separate **private** repo, written through GitHub's
 
 Everything here is on the Exercises tab.
 
+- **Your order.** Drag exercises in the list on the left of the Exercises tab to set the
+  order the board uses for *Your order*. Drop one onto another category to move it
+  there. You can also focus the grip next to a name and use the up and down arrow keys.
 - **Categories.** Each category is its own section on the board. Use *Categories* to add,
   rename, reorder or delete them; deleting one moves its exercises to another. Choose an
   exercise's category on its page.
@@ -70,6 +73,9 @@ Everything here is on the Exercises tab.
   lesson, and below them all your exercises. The outlined section is where clicking an
   exercise logs it. Switch with *Log here*, or with *Clicking one logs it to* above the
   exercises. The log dialog can also send a single entry to the other section.
+- **Reordering a day.** Drag an entry by its grip to put the day in the order you did
+  things, or drag it from your own practice to the lesson or back. The arrow keys work
+  on the grip too.
 - **Every log is its own line**, so the same exercise can appear twice in a session (two
   variations of a scale, say), or in both your own practice and the lesson. A tile shows
   how many times it was done that day. Settings → Board decides whether lesson exercises
@@ -153,7 +159,7 @@ isn't in the file.
 
 ## Updating the app
 
-`index.html` loads the CSS and JavaScript as `style.css?v=4`, `app.js?v=4` and so on.
+`index.html` loads the CSS and JavaScript as `style.css?v=5`, `app.js?v=5` and so on.
 Whenever those files change, the number goes up (in `index.html` and in `SHELL` in
 `sw.js`). That way the browser can't mix a new page with old cached files. After pushing,
 wait a minute, then reload.
